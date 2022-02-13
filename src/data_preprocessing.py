@@ -10,7 +10,7 @@ import torch.nn.functional as F
 
 def normalise_percentile(volume):
     """
-    Normalise with scaling by 99 percentile max.
+    Normalise the intensity values in each modality by scaling by 99 percentile foreground (nonzero) value.
     """
     for mdl in range(volume.shape[1]):
         v_ = volume[:, mdl, :, :].reshape(-1)
@@ -31,7 +31,7 @@ def process_patient(path, target_path):
     volume = torch.stack([torch.from_numpy(x) for x in [flair, t1, t1ce, t2]], dim=0).unsqueeze(dim=0)
     labels = torch.from_numpy(labels > 0.5).float().unsqueeze(dim=0).unsqueeze(dim=0)
 
-    patient_dir = target_path / f"patient_{patient_idx}"
+    patient_dir = target_path / f"patient_{path.name}"
     patient_dir.mkdir(parents=True, exist_ok=True)
 
     volume = normalise_percentile(volume)
@@ -58,39 +58,34 @@ if __name__ == "__main__":
 
     datapath = Path(args.source)
 
-    train_imgs = sorted(list((datapath).iterdir()))
+    all_imgs = sorted(list((datapath).iterdir()))
 
-    indices = list(range(len(train_imgs)))
-    random.seed(0)
-    random.shuffle(indices)
+    splits_path = Path(__file__).parent.parent / "data" / "brats2021_preprocessed" / "data_splits"
 
-    n_train = int(len(indices) * 0.75)
-    n_val = int(len(indices) * 0.05)
-    n_test = len(indices) - n_train - n_val
+    if not splits_path.exists():
+        indices = list(range(len(all_imgs)))
+        random.seed(0)
+        random.shuffle(indices)
 
-    train_indices = indices[:n_train]
-    val_indices = indices[n_train:n_train + n_val]
-    test_indices = indices[n_train + n_val:]
+        n_train = int(len(indices) * 0.75)
+        n_val = int(len(indices) * 0.05)
+        n_test = len(indices) - n_train - n_val
 
-    print(f"Patients in train: {len(train_indices)}")
-    print(f"Patients in val: {len(val_indices)}")
-    print(f"Patients in test: {len(test_indices)}")
+        split_indices = {}
+        split_indices["train"] = indices[:n_train]
+        split_indices["val"] = indices[n_train:n_train + n_val]
+        split_indices["test"] = indices[n_train + n_val:]
 
-    for patient_idx in train_indices:
-        path = train_imgs[patient_idx]
+        for split in ["train", "val", "test"]:
+            (splits_path / split).mkdir(parents=True, exist_ok=True)
+            with open(splits_path / split / "scans.csv", "w") as f:
+                f.write("\n".join([all_imgs[idx].name for idx in split_indices[split]]))
 
-        target_path = Path(__file__).parent.parent / "data" / "brats2021_preprocessed" / "npy_train"
+    for split in ["train", "val", "test"]:
+        paths = [datapath / x.strip() for x in open(splits_path / split / "scans.csv").readlines()]
 
-        process_patient(path, target_path)
+        print(f"Patients in {split}]: {len(paths)}")
 
-    for patient_idx in val_indices:
-        path = train_imgs[patient_idx]
-        target_path = Path(__file__).parent.parent / "data" / "brats2021_preprocessed" / "npy_val"
-
-        process_patient(path, target_path)
-
-    for patient_idx in test_indices:
-        path = train_imgs[patient_idx]
-        target_path = Path(__file__).parent.parent / "data" / "brats2021_preprocessed" / "npy_test"
-
-        process_patient(path, target_path)
+        for source_path in paths:
+            target_path = Path(__file__).parent.parent / "data" / "brats2021_preprocessed" / f"npy_{split}"
+            process_patient(source_path, target_path)

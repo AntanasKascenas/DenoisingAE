@@ -15,7 +15,7 @@ class DataDescriptor:
         self.dataset_cache = {}
 
     def get_dataset(self, split: str):
-        raise NotImplemented("get_dataset needs to be overriden in a subclass.")
+        raise NotImplemented("get_dataset needs to be overridden in a subclass.")
 
     def get_dataset_(self, split: str, cache=True, force=False):
         if split not in self.dataset_cache or force:
@@ -41,7 +41,7 @@ class DataDescriptor:
         return dataloader
 
 
-class DecathlonBrainAEDescriptor(DataDescriptor):
+class BrainAEDataDescriptor(DataDescriptor):
 
     def __init__(self, dataset="brats2021", n_train_patients: Optional[int] = None, n_val_patients: Optional[int] = 20, seed: int = 0, **kwargs):
         super().__init__(**kwargs)

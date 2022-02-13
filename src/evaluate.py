@@ -1,7 +1,7 @@
 #  Copyright (C) 2022 Canon Medical Systems Corporation. All rights reserved
+from math import ceil
 import torch
 from sklearn.metrics import average_precision_score
-
 import tqdm
 
 from denoising import denoising
@@ -22,7 +22,7 @@ def eval_anomalies_batched(trainer, dataset, get_scores, batch_size=32, threshol
 
     y_true_ = torch.zeros(128 * 128 * len(dataset), dtype=torch.half)
     y_pred_ = torch.zeros(128 * 128 * len(dataset), dtype=torch.half)
-    from math import ceil
+
     n_batches = int(ceil(len(dataset) / batch_size))
     i = 0
     for batch_idx in range(n_batches):

@@ -11,7 +11,7 @@ def detach(x):
 
 def simple_train_step(trainer, forward, loss_f):
     state = trainer.state
-    accumulation_steps = state["accumulation_steps"] # Accumulate gradients and only update model parameters every # step.
+    accumulation_steps = state["accumulation_steps"] # Accumulate gradients and only update model parameters every `accumulation_steps`th step.
 
     if state["train_it"] % accumulation_steps == 0:
         trainer.optimiser.zero_grad()
@@ -22,10 +22,10 @@ def simple_train_step(trainer, forward, loss_f):
     state["train_batch_result"] = detach(batch_result)
     loss = loss_f(trainer, batch, batch_result)
 
-    # Check whether loss is nan, if so, skip this batch:
+    # Check whether loss is NaN, if so, stop and raise an Exception:
     with torch.no_grad():
         if torch.isnan(loss).sum() >= 1:
-            raise ValueError("nan loss, stopping...")
+            raise ValueError("NaN loss, stopping...")
 
     if loss.requires_grad: # Check whether gradients are disabled (e.g. during evaluation).
         loss.backward()

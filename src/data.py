@@ -8,7 +8,10 @@ from torch.utils.data import ConcatDataset
 import numpy as np
 
 
-class PatientDatasetNP(torch.utils.data.Dataset):
+class PatientDataset(torch.utils.data.Dataset):
+    """
+    Dataset class representing a collection of slices from a single scan.
+    """
 
     def __init__(self, patient_dir: Path, process_fun=None, id=None, skip_condition=None):
 
@@ -48,6 +51,9 @@ class PatientDatasetNP(torch.utils.data.Dataset):
 
 
 class BrainDataset(torch.utils.data.Dataset):
+    """
+    Dataset class representing a collection of slices from scans from a specific dataset split.
+    """
 
     def __init__(self, dataset="brats2021", split="val", n_tumour_patients=None, n_healthy_patients=None,
                  skip_healthy_s_in_tumour=False,  # whether to skip healthy slices in "tumour" patients
@@ -56,31 +62,19 @@ class BrainDataset(torch.utils.data.Dataset):
 
         self.rng = random.Random(seed)
 
+        assert split in ["train", "val", "test"]
+
         if dataset == "brats2021":
             datapath = Path(__file__).parent.parent / "data" / "brats2021_preprocessed"
 
-            train_path = datapath / "npy_train"
-            val_path = datapath / "npy_val"
-            test_path = datapath / "npy_test"
-
-        else:
-            raise ValueError(f"dataset {dataset} unknown")
-
-        if split == "train":
-            path = train_path
-        elif split == "val":
-            path = val_path
-        elif split == "test":
-            path = test_path
-        else:
-            raise ValueError(f"split {split} unknown")
+            path = datapath / f"npy_{split}"
 
         # Slice skip conditions:
         threshold = 0
         self.skip_tumour = lambda item: item[1].sum() > threshold
         self.skip_healthy = lambda item: item[1].sum() <= threshold
 
-        def process(x, y, coords=None): # TODO remove coords here.
+        def process(x, y):
             # treat all tumour classes as one for anomaly detection purposes.
             y = y > 0.5
 
@@ -94,14 +88,14 @@ class BrainDataset(torch.utils.data.Dataset):
         self.n_healthy_patients = n_healthy_patients if n_healthy_patients is not None else len(patient_dirs) - self.n_tumour_patients
 
         # Patients with tumours
-        self.patient_datasets = [PatientDatasetNP(patient_dirs[i], process_fun=process, id=i,
-                                                  skip_condition=self.skip_healthy if skip_healthy_s_in_tumour else None)
+        self.patient_datasets = [PatientDataset(patient_dirs[i], process_fun=process, id=i,
+                                                skip_condition=self.skip_healthy if skip_healthy_s_in_tumour else None)
                                  for i in range(self.n_tumour_patients)]
 
         # + only healthy slices from "healthy" patients
-        self.patient_datasets += [PatientDatasetNP(patient_dirs[i],
-                                                   skip_condition=self.skip_tumour if skip_tumour_s_in_healthy else None,
-                                                   process_fun=process, id=i) for i in range(self.n_tumour_patients, self.n_tumour_patients + self.n_healthy_patients)]
+        self.patient_datasets += [PatientDataset(patient_dirs[i],
+                                                 skip_condition=self.skip_tumour if skip_tumour_s_in_healthy else None,
+                                                 process_fun=process, id=i) for i in range(self.n_tumour_patients, self.n_tumour_patients + self.n_healthy_patients)]
 
         self.dataset = ConcatDataset(self.patient_datasets)
 
@@ -111,5 +105,3 @@ class BrainDataset(torch.utils.data.Dataset):
 
     def __len__(self):
         return len(self.dataset)
-
-

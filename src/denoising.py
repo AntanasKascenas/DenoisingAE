@@ -12,7 +12,7 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 from training import simple_train_step, simple_val_step
 from metrics import Loss
 from trainer import Trainer
-from data_descriptor import DecathlonBrainAEDescriptor, DataDescriptor
+from data_descriptor import BrainAEDataDescriptor, DataDescriptor
 from utilities import median_pool, ModelSaver
 from unet import UNet
 
@@ -119,8 +119,8 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    dd = DecathlonBrainAEDescriptor(dataset="brats2021", n_train_patients=None, n_val_patients=None,
-                                    seed=args.seed, batch_size=16, )
+    dd = BrainAEDataDescriptor(dataset="brats2021", n_train_patients=None, n_val_patients=None,
+                               seed=args.seed, batch_size=16, )
 
     trainer = denoising(args.identifier, data=dd, lr=0.0001, depth=4,
                         wf=6, noise_std=args.noise_std, noise_res=args.noise_res)

@@ -106,7 +106,7 @@ class Trainer:
             self.callback("after_val_step")
             it += 1
             if it >= self.state["val_epoch_len"]:
-                # Should only trigger when val_epoch_len was specifically supplied to be shorter.
+                # Should only trigger when val_epoch_len was specifically supplied to be shorter than `len(dataloader)`.
                 break
 
         self.callback("after_val_epoch")
@@ -128,7 +128,7 @@ class Trainer:
         self.state["accumulation_steps"] = accumulation_steps # For gradient accumulation over multiple batches.
         current_it = self.state.get("train_it", 0)
 
-        # Pseudo epoch len means we trigger validation epoch after a certain # of iterations regardless
+        # Pseudo epoch len means we trigger validation epoch after a certain number of iterations/batches regardless
         # of whether train_dataloader has finished or not.
         self.state["epoch_len"] = len(self.train_dataloader) if epoch_len is None else epoch_len
         self.state["val_epoch_len"] = len(self.val_dataloader) if val_epoch_len is None else val_epoch_len
