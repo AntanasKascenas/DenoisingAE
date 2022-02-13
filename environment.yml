@@ -1,0 +1,16 @@
+name: dae_env
+channels:
+  - pytorch
+  - conda-forge
+  - defaults
+dependencies:
+  - cudatoolkit=10.2.89=h8f6ccaa_8
+  - nibabel=3.2.1=pyhd8ed1ab_0
+  - numpy=1.20.3=py37h038b26d_1
+  - python=3.7.11=h12debd9_0
+  - pytorch=1.10.2=py3.7_cuda10.2_cudnn7.6.5_0
+  - tqdm=4.62.3=pyhd8ed1ab_0
+  - scikit-image=0.19.1=py37he8f5f7f_0
+  - scikit-learn=1.0.2=py37hf9e9bfc_0
+  - pip:
+    - tensorboard==2.5.0
