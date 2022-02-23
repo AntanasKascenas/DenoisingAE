@@ -4,6 +4,7 @@ import random
 from pathlib import Path
 import numpy as np
 import nibabel as nib
+from tqdm import tqdm
 
 import torch.nn.functional as F
 
@@ -47,16 +48,7 @@ def process_patient(path, target_path):
         np.savez_compressed(patient_dir / f"slice_{slice_idx}", x=low_res_x, y=low_res_y)
 
 
-if __name__ == "__main__":
-
-    import argparse
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-s", "--source", required=True, type=str, help="path to Brats2021 Training Data directory")
-
-    args = parser.parse_args()
-
-    datapath = Path(args.source)
+def preprocess(datapath: Path):
 
     all_imgs = sorted(list((datapath).iterdir()))
 
@@ -86,6 +78,20 @@ if __name__ == "__main__":
 
         print(f"Patients in {split}]: {len(paths)}")
 
-        for source_path in paths:
+        for source_path in tqdm(paths):
             target_path = Path(__file__).parent.parent / "data" / "brats2021_preprocessed" / f"npy_{split}"
             process_patient(source_path, target_path)
+
+
+if __name__ == "__main__":
+
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-s", "--source", required=True, type=str, help="path to Brats2021 Training Data directory")
+
+    args = parser.parse_args()
+
+    datapath = Path(args.source)
+
+    preprocess(datapath)

@@ -2,7 +2,7 @@
 from math import ceil
 import torch
 from sklearn.metrics import average_precision_score
-import tqdm
+from tqdm import tqdm
 
 from denoising import denoising
 from data import BrainDataset
@@ -38,6 +38,7 @@ def eval_anomalies_batched(trainer, dataset, get_scores, batch_size=32, threshol
 
         y_ = (batch_y.view(-1) > 0.5)
         y_hat = anomaly_scores.reshape(-1)
+        # Use half precision to save space in RAM. Want to evaluate the whole dataset at once.
         y_true_[i:i + y_.numel()] = y_.half()
         y_pred_[i:i + y_hat.numel()] = y_hat.half()
         i += y_.numel()
@@ -88,6 +89,26 @@ def eval_anomalies_batched(trainer, dataset, get_scores, batch_size=32, threshol
     return ap
 
 
+def evaluate(id: str = "model", split: str = "test", use_cc: bool = True):
+    trainer = denoising(id, data=None, lr=0.0001, depth=4,
+                        wf=6, noise_std=0.2, noise_res=16)  # Noise parameters don't matter during evaluation.
+
+    trainer.load(id)
+
+    dataset = BrainDataset(dataset="brats2021", split=split, n_tumour_patients=None, n_healthy_patients=0)
+
+    results = eval_anomalies_batched(trainer, dataset=dataset, get_scores=trainer.get_scores, return_dice=True,
+                                     filter_cc=use_cc)
+
+    print(f"AP: {results[0]}")
+    print(f"max Dice: {results[1]}")
+    if use_cc:
+        print(f"max Dice post CC: {results[3]}")
+    print(f"Optimal threshold: {results[2]}")
+
+    return results
+
+
 if __name__ == "__main__":
 
     import argparse
@@ -95,20 +116,15 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-id", "--identifier", required=True, type=str, help="identifier for model to evaluate")
     parser.add_argument("-s", "--split", required=True, type=str, help="'train', 'val' or 'test'")
+    parser.add_argument("-cc", "--use_cc", required=False, type=bool, default=True, help="Whether to use connected component filtering.")
 
     args = parser.parse_args()
 
-    trainer = denoising(args.identifier, data=None, lr=0.0001, depth=4,
-                        wf=6, noise_std=0.2, noise_res=16) # Noise parameters don't matter during evaluation.
+    evaluate(id=args.identifier,
+             split=args.split,
+             use_cc=args.use_cc)
 
-    trainer.load(args.identifier)
 
-    dataset = BrainDataset(dataset="brats2021", split=args.split, n_tumour_patients=None, n_healthy_patients=0)
-
-    ap, max_dice, threshold, post_cc_max_dice = eval_anomalies_batched(trainer, dataset=dataset, get_scores=trainer.get_scores,
-                                                                       return_dice=True, filter_cc=True)
-
-    print(f"ap: {ap}, max_dice: {max_dice}, max_dice_post_cc: {post_cc_max_dice}, threshold: {threshold}")
 
 
 

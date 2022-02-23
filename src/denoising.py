@@ -96,7 +96,6 @@ def denoising(identifier: str, data: Optional[Union[str, DataDescriptor]] = None
     trainer.set_data(data)
     trainer.reset_state()
 
-
     trainer.lr_scheduler = CosineAnnealingLR(optimizer=optimiser, T_max=100)
 
     def update_learning_rate(trainer):
@@ -105,6 +104,16 @@ def denoising(identifier: str, data: Optional[Union[str, DataDescriptor]] = None
     trainer.callback_dict["after_train_epoch"].append(update_learning_rate)
 
     return trainer
+
+
+def train(id: str = "model", noise_res: int = 16, noise_std: float = 0.2, seed: int = 0, batch_size: int = 16):
+    dd = BrainAEDataDescriptor(dataset="brats2021", n_train_patients=None, n_val_patients=None,
+                               seed=seed, batch_size=batch_size)
+
+    trainer = denoising(id, data=dd, lr=0.0001, depth=4,
+                        wf=6, noise_std=noise_std, noise_res=noise_res)
+
+    trainer.train(epoch_len=32, max_epochs=2100, val_epoch_len=32)
 
 
 if __name__ == "__main__":
@@ -116,13 +125,12 @@ if __name__ == "__main__":
     parser.add_argument("-nr", "--noise_res", type=float, default=16,  help="noise resolution.")
     parser.add_argument("-ns", "--noise_std", type=float, default=0.2, help="noise magnitude.")
     parser.add_argument("-s", "--seed", type=int, default=0, help="random seed.")
+    parser.add_argument("-bs", "--batch_size", type=int, default=16, help="model training batch size")
 
     args = parser.parse_args()
 
-    dd = BrainAEDataDescriptor(dataset="brats2021", n_train_patients=None, n_val_patients=None,
-                               seed=args.seed, batch_size=16, )
-
-    trainer = denoising(args.identifier, data=dd, lr=0.0001, depth=4,
-                        wf=6, noise_std=args.noise_std, noise_res=args.noise_res)
-
-    trainer.train(epoch_len=32, max_epochs=2100, val_epoch_len=32)
+    train(id=args.identifier,
+          noise_res=args.noise_res,
+          noise_std=args.noise_std,
+          seed=args.seed,
+          batch_size=args.batch_size)

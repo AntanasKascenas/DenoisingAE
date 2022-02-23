@@ -219,11 +219,11 @@ class Trainer:
         return self.additional_params.get("identifier")
 
 
-    def set_data(self, type: Optional[DataDescriptor]):
+    def set_data(self, data: Optional[DataDescriptor]):
 
-        if isinstance(type, DataDescriptor):
-            dd = type
-        elif type is None:
+        if isinstance(data, DataDescriptor):
+            dd = data
+        elif data is None:
             # Skip setting dataloaders for now
             return self
         else:
